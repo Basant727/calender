@@ -1,103 +1,189 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendar</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <title>AI-Powered Calendar</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background-color: #007BFF;
+            background: linear-gradient(135deg, #87CEFA, #4682B4);
             color: white;
             height: 100vh;
             margin: 0;
+            overflow: hidden;
         }
         .calendar-container {
             background: white;
             color: black;
-            padding: 20px;
+            padding: 10px;
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             text-align: center;
-            width: 90%;
-            max-width: 600px;
+            width: 95%;
+            max-width: 900px;
+            height: 85vh;
+            display: flex;
+            flex-direction: column;
         }
-        .calendar {
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+        }
+        .weekdays, .calendar {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 5px;
-            margin-top: 20px;
+        }
+        .weekdays div {
+            font-weight: bold;
+            padding: 10px 0;
+            background: #4682B4;
+            color: white;
+            border-radius: 5px;
         }
         .day {
             padding: 15px;
-            background: #f4f4f4;
+            background: #f0f8ff;
             border-radius: 5px;
             text-align: center;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            position: relative;
         }
-        .controls, .ai-section {
+        .day:hover, .selected {
+            background: #4682B4;
+            color: white;
+        }
+        .holiday {
+            background: #FFD700 !important;
+            color: black;
+            font-weight: bold;
+        }
+        .holiday span {
+            font-size: 12px;
+            display: block;
+            margin-top: 5px;
+        }
+        .event-list {
             margin-top: 10px;
+            text-align: left;
+            max-height: 100px;
+            overflow-y: auto;
         }
         button {
-            background: #0056b3;
+            background: #4682B4;
             color: white;
             border: none;
             padding: 10px;
             border-radius: 5px;
             cursor: pointer;
             margin: 5px;
+            width: 90%;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #4169E1;
         }
         input {
             padding: 8px;
             border-radius: 5px;
-            width: 80%;
+            width: 85%;
         }
     </style>
 </head>
 <body>
     <h1>AI-Powered Calendar</h1>
     <div class="calendar-container">
-        <div class="controls">
-            <input type="text" id="eventInput" placeholder="Enter a task">
-            <button onclick="addEvent()">Add Task</button>
+        <div class="calendar-header">
+            <button onclick="prevMonth()">◀</button>
+            <h2 id="monthYear"></h2>
+            <button onclick="nextMonth()">▶</button>
+        </div>
+        <div class="weekdays">
+            <div>Sun</div> <div>Mon</div> <div>Tue</div> <div>Wed</div> <div>Thu</div> <div>Fri</div> <div>Sat</div>
         </div>
         <div class="calendar" id="calendar"></div>
+        <div class="controls">
+            <input type="text" id="eventInput" placeholder="Enter an event">
+            <button onclick="addEvent()">Add Event</button>
+        </div>
+        <div class="event-list" id="eventList"></div>
         <div class="ai-section">
-            <button onclick="getTaskDate()">AI Find Task</button>
+            <button onclick="getTaskDate()">AI Find Event</button>
             <p id="aiSuggestion"></p>
         </div>
     </div>
     <script>
+        let events = {};
+        let holidays = {
+            "25-12": "Christmas",
+            "24-10": "Diwali",
+            "8-03": "Holi",
+            "15-08": "Independence Day",
+            "26-01": "Republic Day",
+            "2-10": "Gandhi Jayanti",
+            "22-04": "Ram Navami",
+            "7-09": "Janmashtami",
+            "19-08": "Raksha Bandhan",
+            "14-01": "Makar Sankranti",
+            "10-10": "Navratri"
+        };
+        let currentDate = new Date();
+        let currentMonth = currentDate.getMonth();
+        let currentYear = currentDate.getFullYear();
+
         function generateCalendar() {
             const calendar = document.getElementById("calendar");
-            const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+            const monthYear = document.getElementById("monthYear");
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            monthYear.innerText = new Date(currentYear, currentMonth).toLocaleString('default', { month: 'long', year: 'numeric' });
+            
             calendar.innerHTML = "";
+            for (let i = 0; i < firstDay; i++) {
+                calendar.appendChild(document.createElement("div"));
+            }
+            
             for (let i = 1; i <= daysInMonth; i++) {
                 const dayDiv = document.createElement("div");
                 dayDiv.className = "day";
-                dayDiv.innerText = i;
+                dayDiv.innerHTML = `<span>${i}</span>`;
                 dayDiv.setAttribute("data-day", i);
+                dayDiv.onclick = () => selectDate(i, dayDiv);
+                let dateKey = `${i}-${currentMonth + 1}`;
+                if (holidays[dateKey]) {
+                    dayDiv.classList.add("holiday");
+                    dayDiv.innerHTML += `<span>${holidays[dateKey]}</span>`;
+                }
                 calendar.appendChild(dayDiv);
+                if (i === currentDate.getDate() && currentMonth === currentDate.getMonth() && currentYear === currentDate.getFullYear()) {
+                    dayDiv.classList.add("selected");
+                }
             }
         }
 
-        function addEvent() {
-            const eventText = document.getElementById("eventInput").value;
-            if (!eventText) return;
-            alert("Task added successfully!");
-            document.getElementById("eventInput").value = "";
+        function selectDate(day, element) {
+            document.querySelectorAll(".day").forEach(d => d.classList.remove("selected"));
+            element.classList.add("selected");
+            document.getElementById("eventInput").setAttribute("data-selected-day", day);
         }
 
-        async function getTaskDate() {
-            const eventText = document.getElementById("eventInput").value;
-            if (!eventText) return alert("Enter a task first!");
-            document.getElementById("aiSuggestion").innerText = "Finding task...";
-            setTimeout(() => {
-                document.getElementById("aiSuggestion").innerText = "AI suggests: Tomorrow";
-            }, 2000);
+        function prevMonth() {
+            currentMonth = (currentMonth === 0) ? 11 : currentMonth - 1;
+            if (currentMonth === 11) currentYear--;
+            generateCalendar();
+        }
+
+        function nextMonth() {
+            currentMonth = (currentMonth === 11) ? 0 : currentMonth + 1;
+            if (currentMonth === 0) currentYear++;
+            generateCalendar();
         }
 
         generateCalendar();
