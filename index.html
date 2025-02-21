@@ -37,37 +37,28 @@
 <body>
     <div class="container">
         <h1>AI-Powered Calendar</h1>
-        <input type="date" id="datePicker">
-        <input type="text" id="eventInput" placeholder="Add an event">
-        <button onclick="addEvent()">Add Event</button>
-        <button onclick="getAiSuggestion()">Get AI Suggestions</button>
+        <input type="text" id="eventInput" placeholder="Enter a task">
+        <button onclick="addEvent()">Add Task</button>
+        <button onclick="getTaskDate()">Find Task Date</button>
         <div id="eventList"></div>
         <p id="aiSuggestion"></p>
     </div>
     <script>
-        const encryptedApiKey = "U2FsdGVkX1+QdF7vK6RbQ1Y0HQ0pEjR5gB2mZI/2X6o";
-        const secretPassphrase = "super_secret_pass";
-
-        function decryptApiKey() {
-            let bytes = CryptoJS.AES.decrypt(encryptedApiKey, secretPassphrase);
-            return bytes.toString(CryptoJS.enc.Utf8);
-        }
+        const apiKey = "AIzaSyASMCMBYiT6PPnHjJyBoSH4cXheNYvtQkg";
 
         function addEvent() {
-            const date = document.getElementById("datePicker").value;
             const eventText = document.getElementById("eventInput").value;
-            if (date && eventText) {
-                document.getElementById("eventList").innerHTML += `<p><b>${date}:</b> ${eventText}</p>`;
+            if (eventText) {
+                document.getElementById("eventList").innerHTML += `<p><b>Task:</b> ${eventText}</p>`;
                 document.getElementById("eventInput").value = "";
             }
         }
 
-        async function getAiSuggestion() {
-            const date = document.getElementById("datePicker").value;
-            if (!date) return alert("Select a date first!");
+        async function getTaskDate() {
+            const eventText = document.getElementById("eventInput").value;
+            if (!eventText) return alert("Enter a task first!");
 
-            const apiKey = decryptApiKey();
-            const prompt = `Suggest some events for ${date}`;
+            const prompt = `Find the date associated with the following task: ${eventText}`;
 
             try {
                 const response = await fetch(
@@ -79,7 +70,7 @@
                     }
                 );
                 const data = await response.json();
-                document.getElementById("aiSuggestion").innerText = `AI Suggestion: ${data.text || "No suggestions available"}`;
+                document.getElementById("aiSuggestion").innerText = `AI Found Date: ${data.text || "No date found"}`;
             } catch (error) {
                 console.error("AI Error:", error);
             }
